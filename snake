@@ -1,0 +1,138 @@
+#include <IRremote.h>     // IRremote库声明
+#include <stdlib.h>
+int RECV_PIN = A5;        //定义红外接收器的引脚为11
+ 
+IRrecv irrecv(RECV_PIN); 
+ 
+decode_results results;
+char key;
+int rowPin[8] = {5,4,3,2,7,8,9,10};//+
+int colPin[8] = {11,13,12,A0,A1,A2,A3,A4};//-
+int snake[8][8];
+int xx[100];
+int yy[100];
+int x;
+int y;
+int a;
+int b;
+int len;
+void setup() {
+  // put your setup code here, to run once:
+  for(int i=0;i<8;i++){ 
+    pinMode(rowPin[i],OUTPUT);
+    pinMode(colPin[i],OUTPUT);
+
+  }
+  restart();
+  irrecv.enableIRIn(); // 启动接收器
+}
+void restart(){ 
+  for(int i=0;i<8;i++){ 
+    xx[i]=0;
+    yy[i]=0;
+  }
+  for(int x=0;x<8;x++){ 
+    for(int y=0;y<8;y++){ 
+      snake[x][y]=0;
+    }
+  }
+  snake[4][4]=1;
+  x=4;
+  y=4;
+  xx[0]=4;
+  yy[0]=4;
+  len=1;
+  key='w';
+  createScore();
+}
+boolean touchBody(int i,int j){ 
+  for(int n=0;n<=len;n++){ 
+    if(i==xx[n]&&j==yy[n]) return true;
+  }
+  return false;
+}
+void createScore(){ 
+  do{ 
+    a=random(1,7);
+    b=random(1,7);
+  }while(touchBody(a,b));
+  snake[a][b]=1;
+}
+void getkey(){ 
+  int val;
+  if (irrecv.decode(&results)) 
+  {
+    val = results.value;
+
+    switch(val){ 
+      case 765: key='w';break;
+      case -8161: key='a';break;
+      case -28561: key='d';break;
+      case -26521: key='s';break;
+      case -22441: key='0';break;
+      
+    }
+
+    irrecv.resume(); // 接收下一个值
+  }
+}
+boolean readRow(int r){ 
+  for(int i=0; i<8; i++){ 
+    if(snake[r][i]==1) return true;
+  }
+  return false;
+}
+void printWhole(){ 
+  for(int r=0;r<8;r++){ 
+    printline(r);
+    getkey();
+  }
+}
+void printline(int r){ 
+  if(readRow(r)){ 
+    
+    for(int c=0;c<8;c++){ 
+      if(snake[r][c]==1) digitalWrite(colPin[c],LOW); 
+      else{ 
+        digitalWrite(colPin[c],HIGH); 
+      }
+    }
+    digitalWrite(rowPin[r],HIGH);
+  }
+  else{ 
+    digitalWrite(rowPin[r],LOW);
+    for(int c=0;c<8;c++){ 
+      digitalWrite(colPin[c],LOW); 
+    }
+  }
+  
+  digitalWrite(rowPin[r],LOW);
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  snake[xx[len-1]][yy[len-1]]=0;
+  switch(key){ 
+      case 'w':x++;break;
+      case 'a':y++;break;
+      case 'd':y--;break;
+      case 's':x--;break;
+      case '0':x=4;y=4;key='w';break;
+  }
+  if(x<0||x>7||y<0||y>7||touchBody(x,y)){ 
+    restart();
+  }
+  for(int i=99;i>0;i--){ yy[i]=yy[i-1];xx[i]=xx[i-1];}
+  xx[0]=x;
+  yy[0]=y;
+
+  snake[x][y]=1;
+  
+  for(int i=0;i<500;i++) printWhole();
+  if(x==a&&y==b){ 
+    createScore();
+    len++;
+  }
+    
+}
